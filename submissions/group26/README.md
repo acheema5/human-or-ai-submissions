@@ -12,13 +12,13 @@ Cornell Tech · Applied Machine Learning (CS 5785) · Kaggle competition code.
 
 ---
 
-> **Status: scaffolding.** This directory currently contains the project
-> structure, dependency pins and shared configuration only. The training,
-> evaluation and prediction scripts are integrated in later milestones, and
-> the command sections below are marked *not yet implemented* until the
-> corresponding script exists here and has been run. No command in this README
-> is listed as working unless it has actually been executed from this
-> directory.
+> **Status: in progress.** Implemented so far: shared configuration, dataset
+> loading, the 23 stylometric features, and the validation split with its
+> provenance check. The model, experiment and prediction scripts are
+> integrated in later milestones, and the command sections below stay marked
+> *not yet implemented* until the corresponding script exists here and has
+> been run. No command in this README is listed as working unless it has
+> actually been executed from this directory.
 
 ## The task
 
@@ -41,7 +41,8 @@ It is a lazy, per-query model. For each passage to be scored:
 1. Extract 23 writing-style features — sentence-length mean and spread, mean
    word length, root type-token ratio, hapax rate, contraction rate, newline
    and blank-line rates, uppercase and digit rates, and per-character rates for
-   twelve punctuation marks.
+   thirteen punctuation marks (10 scalar features + 13 punctuation rates = 23).
+   See `features.py` for the exact definitions.
 2. Standardize them with a `StandardScaler` fitted on the training rows only.
 3. Retrieve the k nearest training passages by Euclidean distance.
 4. Fit an L2-regularized logistic regression on just those neighbours,
@@ -76,7 +77,9 @@ No Kaggle public or private scores are recorded yet.
 ## Validation split
 
 The team shares one fixed holdout so every model is compared on identical
-passages. The IDs live in `group26_validation_ids.txt` (added in Milestone 2).
+passages. The IDs live in `group26_validation_ids.txt`, and
+`data_loading.verify_split_provenance()` re-derives them from the seed on
+every run of `data_loading.py`.
 
 Generation procedure, seed **20261023**:
 
@@ -130,6 +133,26 @@ can be unzipped in place. To keep the data elsewhere, set the
 
 ## Reproducing our results
 
+### Verify the data and the validation split
+
+Implemented and tested. From `submissions/group26/`:
+
+```bash
+python data_loading.py
+```
+
+This loads `train.csv`, rebuilds the 8,000 / 2,000 split from
+`group26_validation_ids.txt`, asserts the class balance, re-derives the
+validation IDs from seed 20261023 and confirms they match the committed file
+exactly, and extracts a sample feature block. It exits non-zero if any check
+fails.
+
+If the CSVs are not under `submissions/group26/data/`, point at them:
+
+```bash
+GROUP26_DATA_DIR=/path/to/kaggle/csvs python data_loading.py
+```
+
 ### Train and evaluate
 
 *Not yet implemented.* The training and evaluation entrypoints are added in
@@ -160,9 +183,11 @@ submissions/group26/
     results/                  # committed experiment outputs
     data/                     # competition CSVs, not committed
 
-    # added in later milestones
+    group26_validation_ids.txt  # the shared 2,000-row holdout
     data_loading.py           # loaders, schema and split validation
     features.py               # the 23 stylometric features
+
+    # added in later milestones
     models.py                 # KNN and locally weighted logistic regression
     train.py                  # training / evaluation entrypoint
     evaluate.py               # validation metrics and error analysis
