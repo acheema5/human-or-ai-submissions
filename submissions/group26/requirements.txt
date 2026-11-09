@@ -1,0 +1,13 @@
+# Group 26 - Human or AI?
+#
+# Versions are pinned to the environment the reported results were measured in
+# (Python 3.14.7, macOS arm64). The pipeline uses only standard scikit-learn
+# estimators, so nearby versions should reproduce the same numbers, but the
+# pins are what we actually ran.
+
+numpy==2.5.4
+scipy==1.18.1
+pandas==3.1.1
+scikit-learn==1.9.1
+matplotlib==3.11.2
+joblib==1.6.0
