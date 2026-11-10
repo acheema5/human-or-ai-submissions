@@ -13,11 +13,11 @@ Cornell Tech · Applied Machine Learning (CS 5785) · Kaggle competition code.
 ---
 
 > **Status: in progress.** Implemented so far: shared configuration, dataset
-> loading, the 23 stylometric features, and the validation split with its
-> provenance check. The model, experiment and prediction scripts are
-> integrated in later milestones, and the command sections below stay marked
-> *not yet implemented* until the corresponding script exists here and has
-> been run. No command in this README is listed as working unless it has
+> loading, the 23 stylometric features, the validation split with its
+> provenance check, and the distance-weighted KNN baseline. The remaining
+> model, experiment and prediction scripts are integrated in later
+> milestones, and the command sections below stay marked *not yet
+> implemented* until the corresponding script exists here and has been run. No command in this README is listed as working unless it has
 > actually been executed from this directory.
 
 ## The task
@@ -153,11 +153,40 @@ If the CSVs are not under `submissions/group26/data/`, point at them:
 GROUP26_DATA_DIR=/path/to/kaggle/csvs python data_loading.py
 ```
 
-### Train and evaluate
+### KNN baseline
 
-*Not yet implemented.* The training and evaluation entrypoints are added in
-Milestones 3–5. This section will carry the exact commands once they exist and
-have been run.
+Implemented and tested. From `submissions/group26/`:
+
+```bash
+python experiments/knn_baseline.py
+```
+
+Distance-weighted KNN over the 23 standardized stylometric features,
+evaluated at k = 15, 35 and 75 on the shared validation split. Writes
+`results/knn_comparison.csv`. Measured:
+
+| k | Train AUROC (self-excluded) | Validation AUROC | Fit s | Predict s |
+| --- | --- | --- | --- | --- |
+| **15** | 0.973000 | **0.976686** | 0.001 | 0.031 |
+| 35 | 0.969870 | 0.974544 | 0.000 | 0.012 |
+| 75 | 0.964611 | 0.968988 | 0.000 | 0.018 |
+
+Featurizing all 10,000 passages takes about 1.8 s; the KNN fit itself is
+effectively free, since fitting only builds the neighbour index.
+
+The training AUROC is computed with each passage **excluded from its own
+vote** (scikit-learn's `predict_proba(None)`). Scoring training rows normally
+would match each one against itself at distance zero and report a
+near-perfect, meaningless figure.
+
+Note that plain KNN is best at the *smallest* k tested and degrades as k
+grows. The locally weighted logistic regression added in the next milestone
+behaves the opposite way, so the two model families do not share a best k.
+
+### Train and evaluate the selected model
+
+*Not yet implemented.* The locally weighted logistic regression entrypoint is
+added in Milestones 4–5.
 
 ### Generate the Kaggle submission
 
@@ -187,8 +216,11 @@ submissions/group26/
     data_loading.py           # loaders, schema and split validation
     features.py               # the 23 stylometric features
 
+    models.py                 # model construction and standardization
+    experiments/
+        knn_baseline.py       # distance-weighted KNN at k = 15 / 35 / 75
+
     # added in later milestones
-    models.py                 # KNN and locally weighted logistic regression
     train.py                  # training / evaluation entrypoint
     evaluate.py               # validation metrics and error analysis
     predict.py                # writes submission.csv
