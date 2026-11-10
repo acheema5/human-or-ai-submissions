@@ -30,7 +30,7 @@ def default_data_dir():
 
     Resolves against the submission directory instead of the current working
     directory, so these scripts behave identically whether they are run from
-    submissions/group26/ or from the repository root. Falls back to
+    submissions/group-number-26/ or from the repository root. Falls back to
     group26_config.DATA_ROOT when the CSVs are absent, so --help and argument errors
     still work on a fresh clone with no data downloaded.
 

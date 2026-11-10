@@ -12,7 +12,7 @@ Protocol:
   * Training AUROC uses self-excluded neighbours, so a passage never votes for
     itself. Reporting it any other way would give a meaningless ~1.0.
 
-Run from `submissions/group26/`:
+Run from `submissions/group-number-26/`:
 
     python experiments/knn_baseline.py
 """
@@ -29,7 +29,7 @@ import pandas as pd
 from sklearn.metrics import roc_auc_score
 
 # Make the package modules importable when run as a script from either
-# submissions/group26/ or the repository root.
+# submissions/group-number-26/ or the repository root.
 PACKAGE_DIR = Path(__file__).resolve().parents[1]
 if str(PACKAGE_DIR) not in sys.path:
     sys.path.insert(0, str(PACKAGE_DIR))

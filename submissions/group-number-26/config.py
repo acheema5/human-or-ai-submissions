@@ -1,13 +1,13 @@
 """Shared paths, seeds and model constants for the Group 26 pipeline.
 
 Every path here is relative to this directory, so the scripts run from the
-repository root as `python submissions/group26/<script>.py` or from inside
-`submissions/group26/` directly. Nothing outside this folder is read or
+repository root as `python submissions/group-number-26/<script>.py` or from inside
+`submissions/group-number-26/` directly. Nothing outside this folder is read or
 written, and the competition CSVs are never committed.
 
 Data location
 -------------
-Put the Kaggle CSVs in `submissions/group26/data/`. `find_data_dir()` also
+Put the Kaggle CSVs in `submissions/group-number-26/data/`. `find_data_dir()` also
 accepts the nested folder the Kaggle download produces, e.g.
 `data/cornell-tech-cs-5785-combined-2026-ai-vs-human-text/`, so the archive can
 be unzipped in place. Override with the `GROUP26_DATA_DIR` environment
@@ -61,19 +61,18 @@ LABELED_ROWS = 10_000
 TEST_ROWS = 3000
 
 
-# --- Selected model ---------------------------------------------------------
-# Locally weighted logistic regression over 23 stylometric features.
-# These constants are the configuration selected on the shared validation
-# split; the scripts that measure them are added in later milestones.
+# --- Models -----------------------------------------------------------------
+# The selected model is uniform-vote KNN with k = 15 over the 23 stylometric
+# features. Its hyperparameters live with the implementation in `team_knn.py`
+# (`K` and `GRID`), not here, so there is exactly one place to change them.
+#
+# An earlier draft of this file carried N_NEIGHBORS / LOCAL_C / CLIP_LIMIT for
+# a locally weighted logistic regression that the team did not submit. Those
+# constants were unused by any script and are removed rather than left to
+# contradict the selected model.
 
-N_NEIGHBORS = 75
-LOCAL_C = 1.0
-
-#: Clip each standardized feature to this interval before neighbour search and
-#: the local fit. Measured as an improvement over the unclipped model.
-CLIP_LIMIT = 5.0
-
-#: Baseline comparison model, for the model-comparison section.
+#: k values swept by the distance-weighted KNN comparison in
+#: `experiments/knn_baseline.py`. Comparison experiment, not the final model.
 KNN_K_GRID = (15, 35, 75)
 
 
@@ -97,7 +96,7 @@ def find_data_dir(root: Path | None = None) -> Path:
     raise FileNotFoundError(
         "Could not find the competition CSVs "
         f"({', '.join(REQUIRED_FILES)}). Looked in:\n  {searched}\n"
-        "Download them from Kaggle into submissions/group26/data/, or set "
+        "Download them from Kaggle into submissions/group-number-26/data/, or set "
         "GROUP26_DATA_DIR."
     )
 

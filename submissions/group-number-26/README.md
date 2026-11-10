@@ -334,6 +334,25 @@ modified.
   validation scores, not retrained inside this directory.
 - **No Kaggle leaderboard score recorded yet.**
 
+## Alignment with the written report
+
+The current report (`Group26_Human-or-AI-Report_Current.docx`) and this
+repository describe the same model and the same numbers. Figures checked
+against a fresh run of the committed code:
+
+| Figure | Report | Reproduced here |
+| --- | --- | --- |
+| Selected model | KNN with equal votes, 23 style measurements | uniform-vote KNN, k = 15, 23 features |
+| Validation AUROC | 0.9748 | 0.974770 |
+| KNN sweep | 15 (0.9748), 35 (0.9722), 75 (0.9662) | 0.974770 / 0.972228 / 0.966182 |
+| Training AUROC, self-excluded | 0.9711 | 0.971068 |
+| Learning curve | 0.9222 @ 500 rows → 0.9748 @ 8,000 | 0.922163 → 0.974770 |
+| Feature ablation | 0.97477 → 0.90804 | 0.974770 → 0.908040 |
+| Reproduction commands | `team_knn.py --out`, `team_knn.py --submission` | both present and verified working |
+
+Every figure in this README was produced by a script in this directory on our
+own machines.
+
 ## AI assistance disclosure
 
 Required for Q6.3. Each account below is the member's own; nothing is inferred
