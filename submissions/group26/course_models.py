@@ -15,10 +15,32 @@ from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from threadpoolctl import threadpool_limits
 
+# Aliased: this module already uses `config` as a local variable name inside
+# main() and predict(), which would shadow a plain `import config`.
+import config as group26_config
+
 
 SEED = 20261023
 SETTINGS = {"logistic": (.01, .1, 1.0), "knn": (15, 35, 75), "forest": (12, 24, None)}
 SIZES = (500, 1000, 2000, 5000, 8000)
+
+
+def default_data_dir():
+    """Where to look for the competition CSVs when --data is not given.
+
+    Resolves against the submission directory instead of the current working
+    directory, so these scripts behave identically whether they are run from
+    submissions/group26/ or from the repository root. Falls back to
+    group26_config.DATA_ROOT when the CSVs are absent, so --help and argument errors
+    still work on a fresh clone with no data downloaded.
+
+    This is the only change made while relocating Kevin's modules into the
+    canonical directory; the model and experiment logic below is his, unedited.
+    """
+    try:
+        return group26_config.find_data_dir()
+    except FileNotFoundError:
+        return group26_config.DATA_ROOT
 
 
 def read_rows(path):
@@ -191,8 +213,8 @@ def predict(train, test, config, output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--data", type=Path, default=Path("data"))
-    parser.add_argument("--validation-ids", type=Path, default=Path("data/group26_validation_ids.txt"))
+    parser.add_argument("--data", type=Path, default=default_data_dir())
+    parser.add_argument("--validation-ids", type=Path, default=group26_config.VALIDATION_IDS)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--make-split", action="store_true")
     mode.add_argument("--out", type=Path, help="New directory for metrics and validation predictions")

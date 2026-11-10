@@ -12,7 +12,17 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
 from threadpoolctl import threadpool_limits
 
-from course_models import SEED, SIZES, make_split, read_rows, split_rows, targets, write_report
+import config
+from course_models import (
+    SEED,
+    SIZES,
+    default_data_dir,
+    make_split,
+    read_rows,
+    split_rows,
+    targets,
+    write_report,
+)
 from style_features import FEATURES_WITHOUT_LAYOUT_PUNCTUATION, style_features
 
 
@@ -149,8 +159,8 @@ def predict(train, test, output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--data", type=Path, default=Path("data"))
-    parser.add_argument("--validation-ids", type=Path, default=Path("data/group26_validation_ids.txt"))
+    parser.add_argument("--data", type=Path, default=default_data_dir())
+    parser.add_argument("--validation-ids", type=Path, default=config.VALIDATION_IDS)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--make-split", action="store_true")
     mode.add_argument("--out", type=Path, help="New directory for metrics and validation scores")
