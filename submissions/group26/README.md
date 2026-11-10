@@ -4,21 +4,16 @@ Cornell Tech · Applied Machine Learning (CS 5785) · Kaggle competition code.
 
 **Kaggle team name:** `group26`
 
-| Member | NetID |
-| --- | --- |
-| Arjun Cheema | ac3387 |
-| Kevin Bradicich | kb846 |
-| May Hung | hh867 |
+| Member | NetID | Main contribution |
+| --- | --- | --- |
+| Arjun Cheema | ac3387 | Word and character TF-IDF + linear SVM; shared data loader, split verification, distance-weighted KNN comparison |
+| Kevin Bradicich | kb846 | Style-feature KNN (the selected model), course-method baselines, validation comparison and reproduction workflow |
+| May Hung | hh867 | Word TF-IDF logistic regression |
+
+> **Roster note.** Contribution lines record what each member described as
+> their own work. Confirm the roster and NetIDs before opening the course PR.
 
 ---
-
-> **Status: in progress.** Implemented so far: shared configuration, dataset
-> loading, the 23 stylometric features, the validation split with its
-> provenance check, and the distance-weighted KNN baseline. The remaining
-> model, experiment and prediction scripts are integrated in later
-> milestones, and the command sections below stay marked *not yet
-> implemented* until the corresponding script exists here and has been run. No command in this README is listed as working unless it has
-> actually been executed from this directory.
 
 ## The task
 
@@ -33,53 +28,83 @@ AI model rather than written by a human.
 
 ## Selected model
 
-**Locally weighted logistic regression over 23 stylometric features**, with
-k = 75 neighbours and C = 1.0.
+**Uniform-vote KNN with k = 15 over 23 stylometric features.**
+Validation AUROC **0.974770** on the shared 2,000-passage holdout.
 
-It is a lazy, per-query model. For each passage to be scored:
+For every passage scored:
 
-1. Extract 23 writing-style features — sentence-length mean and spread, mean
-   word length, root type-token ratio, hapax rate, contraction rate, newline
-   and blank-line rates, uppercase and digit rates, and per-character rates for
-   thirteen punctuation marks (10 scalar features + 13 punctuation rates = 23).
-   See `features.py` for the exact definitions.
-2. Standardize them with a `StandardScaler` fitted on the training rows only.
-3. Retrieve the k nearest training passages by Euclidean distance.
-4. Fit an L2-regularized logistic regression on just those neighbours,
-   re-centred on the query and weighted by inverse distance.
-5. Report that local model's predicted probability at the query point.
+1. Extract 23 writing-style measurements — sentence-length mean and spread,
+   mean word length, root type-token ratio, hapax rate, contraction rate,
+   newline and blank-line rates, uppercase and digit rates, and per-character
+   rates for thirteen punctuation marks (10 scalar features + 13 punctuation
+   rates = 23). Definitions in `features.py`.
+2. Standardize with a `StandardScaler` fitted on the labeled training
+   passages only.
+3. Find the 15 nearest training passages by Euclidean distance.
+4. Report the **unweighted** share of those neighbours labelled AI.
 
-The chosen variant additionally **clips each standardized feature to
-[−5, +5]** before the neighbour search and the local fit, which limits the
-influence of a small number of extreme outliers.
+Implemented in `team_knn.py` (`K = 15`, `weights="uniform"`,
+`metric="euclidean"`).
 
-We prefer this over our TF-IDF + linear SVM because it scored substantially
-higher on the shared validation split and degraded less under a formatting
-perturbation we tested. Both comparisons are documented in later milestones.
+### Why uniform voting, when distance weighting scored higher
 
-## Results measured during development
+Distance-weighted KNN scores higher on our holdout at every k tested, by about
+0.002 AUROC (see the comparison table). We selected the uniform-vote variant
+anyway, to stay within the methods covered in the course. This is a deliberate,
+documented trade-off, not an oversight.
 
-These were measured in our separate development repository on the shared
-validation split described below. **The scripts that reproduce them are added
-to this directory in Milestones 3–7**; this table records what we are
-targeting, not what this directory can currently run.
+The mechanism behind the gap is worth recording. Uniform voting at k = 15 can
+only emit multiples of 1/15, so the 2,000 validation passages collapse onto
+**16 distinct scores**, with 943 pinned to exactly 0 or 1 and one tie group
+holding 495 passages. AUROC awards half credit for ties, so the lost resolution
+is the cost. On the test set the submission has 16 distinct values, with 1,061
+of 3,000 rows at exactly 0 or 1.
 
-| Model | Validation AUROC |
-| --- | --- |
-| Distance-weighted KNN, k = 15 | 0.9767 |
-| Locally weighted logistic regression, k = 75 | 0.984357 |
-| **Same, with ±5 feature clipping (selected)** | **0.986071** |
-| Word + char TF-IDF + LinearSVC (baseline config) | 0.9458 |
-| Word + char TF-IDF + LinearSVC (tuned config) | 0.9703 |
+## Results
 
-No Kaggle public or private scores are recorded yet.
+All figures below are on the shared 2,000-passage validation holdout. **None
+are Kaggle public or private scores** — no leaderboard result is recorded yet.
+
+### Selected model and the KNN sweep
+
+| Model | k | Train AUROC (self-excluded) | Validation AUROC |
+| --- | --- | --- | --- |
+| **Uniform-vote KNN (selected)** | **15** | 0.971068 | **0.974770** |
+| Uniform-vote KNN | 35 | 0.967839 | 0.972228 |
+| Uniform-vote KNN | 75 | 0.962360 | 0.966182 |
+
+Training AUROC excludes each passage from its own neighbour set
+(scikit-learn's `predict_proba(None)`). Scoring training rows normally would
+match each against itself at distance zero and report a meaningless figure.
+
+### Comparison experiments — none of these is the selected model
+
+| Experiment | Validation AUROC | Note |
+| --- | --- | --- |
+| Distance-weighted KNN, k = 15 | 0.976686 | **Comparison only** (`experiments/knn_baseline.py`); higher, but outside the course methods |
+| Distance-weighted KNN, k = 35 | 0.974544 | comparison only |
+| Distance-weighted KNN, k = 75 | 0.968988 | comparison only |
+| Scaler fitted on train + 3,000 unlabeled | 0.976552 | **unlabeled-data experiment, not the final model** — see below |
+| Style-feature logistic regression, C = 10 | 0.968604 | matched control on the same 23 features |
+| Ablation: drop layout + punctuation (23 → 8 features) | 0.908040 | shows how much signal lives in layout |
+| Word + char TF-IDF + LinearSVC, tuned | 0.970298 | separate pipeline, compared via exported per-passage scores |
+
+### The unlabeled-scaler experiment is *not* the submitted model
+
+Fitting the `StandardScaler` on the 8,000 labeled training passages **plus**
+the 3,000 unlabeled passages, then running the same k = 15 uniform-vote KNN,
+scores **0.976552** — roughly 0.0018 above the selected configuration.
+
+This is the course-required semi-supervised experiment, answering whether the
+unlabeled passages help. **It is not the model we submit.** The submitted model
+is the selected configuration above, whose scaler sees labeled training data
+only. Readers of `metrics.json` should not mistake the `extra_scaler` entry for
+the final pipeline.
 
 ## Validation split
 
 The team shares one fixed holdout so every model is compared on identical
-passages. The IDs live in `group26_validation_ids.txt`, and
-`data_loading.verify_split_provenance()` re-derives them from the seed on
-every run of `data_loading.py`.
+passages. The IDs are committed as `group26_validation_ids.txt`.
 
 Generation procedure, seed **20261023**:
 
@@ -90,16 +115,22 @@ Generation procedure, seed **20261023**:
 
 The string sort is essential. Splitting the original CSV order, or rows sorted
 numerically by id, with the same seed reproduces only 406 of the 2,000 IDs —
-chance overlap. With the string sort the procedure regenerates the ID file
-exactly. An earlier mismatch within our team traced to exactly this difference
-in row ordering, not to the seed.
+chance overlap. With the string sort the procedure regenerates the file exactly,
+byte for byte. An earlier mismatch inside our team traced to this difference in
+row ordering, not to the seed.
 
 The holdout is balanced: 1,000 human and 1,000 AI passages, leaving 8,000
-training rows at 4,000 per class.
+training rows at 4,000 per class. SHA-256 of the ID file:
+`7aa7648f5f334cc462dd33918433f284c7e3f0af2283bcbff9b898f8268dee8c`.
+
+`data_loading.py` re-derives the IDs from the seed on every run and fails if
+they do not match the committed file.
 
 ## Environment
 
-Developed and measured on **Python 3.14.7** (macOS, arm64).
+Every reported number was measured on **Python 3.14.7**, macOS 26.6.2 (arm64).
+Kevin's original workflow specified Python 3.13; those results reproduce
+unchanged on 3.14.7, which is the version verified here.
 
 ```bash
 cd submissions/group26
@@ -108,13 +139,14 @@ source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-Pinned dependencies: numpy 2.5.4, scipy 1.18.1, pandas 3.1.1,
-scikit-learn 1.9.1, matplotlib 3.11.2, joblib 1.6.0.
+Pinned: numpy 2.5.4, pandas 3.1.1, scikit-learn 1.9.1, scipy 1.18.1,
+threadpoolctl 3.8.0. `threadpoolctl` is required, not optional — `team_knn.py`
+and `course_models.py` import it to pin BLAS to a single thread so neighbour
+timings are stable.
 
 ### Data
 
-The competition CSVs are **not** committed. Download them from Kaggle and
-place them here:
+The competition CSVs are **not** committed. Download them from Kaggle into:
 
 ```text
 submissions/group26/data/
@@ -128,147 +160,173 @@ submissions/group26/data/
 `config.find_data_dir()` also accepts the nested folder the Kaggle download
 produces (for example
 `data/cornell-tech-cs-5785-combined-2026-ai-vs-human-text/`), so the archive
-can be unzipped in place. To keep the data elsewhere, set the
-`GROUP26_DATA_DIR` environment variable.
+can be unzipped in place. To keep the data elsewhere, pass `--data` or set
+`GROUP26_DATA_DIR`:
+
+```bash
+GROUP26_DATA_DIR=/path/to/kaggle/csvs python team_knn.py --out results/run1
+```
 
 ## Reproducing our results
 
-### Verify the data and the validation split
+Every command below has been executed from `submissions/group26/` and produces
+the numbers quoted above. They also work from the repository root as
+`python submissions/group26/<script>.py`.
 
-Implemented and tested. From `submissions/group26/`:
+### 1. Verify the data and the validation split
 
 ```bash
 python data_loading.py
 ```
 
-This loads `train.csv`, rebuilds the 8,000 / 2,000 split from
-`group26_validation_ids.txt`, asserts the class balance, re-derives the
-validation IDs from seed 20261023 and confirms they match the committed file
-exactly, and extracts a sample feature block. It exits non-zero if any check
-fails.
+Loads `train.csv`, rebuilds the 8,000 / 2,000 split, asserts class balance,
+re-derives the validation IDs from seed 20261023, confirms they match the
+committed file exactly, and extracts a sample feature block. Exits non-zero on
+any failure.
 
-If the CSVs are not under `submissions/group26/data/`, point at them:
+If the shared ID file is ever missing, regenerate it:
 
 ```bash
-GROUP26_DATA_DIR=/path/to/kaggle/csvs python data_loading.py
+python team_knn.py --make-split
 ```
 
-### KNN baseline
+### 2. Evaluate the selected model and the report experiments
 
-Implemented and tested. From `submissions/group26/`:
+```bash
+python team_knn.py --out results/team_knn_run
+```
+
+Writes `metrics.json` and `validation_scores.csv` covering the KNN sweep, the
+matched logistic control, the learning curve, the unlabeled-data scaler
+comparison, the feature ablation, length-bin AUROCs and validation error
+examples. Pick a fresh output directory each run — the script refuses to
+overwrite an existing path.
+
+To score a teammate's exported validation predictions on the same IDs:
+
+```bash
+python team_knn.py --out results/with_partners \
+  --partner-logistic PATH --partner-svm PATH
+```
+
+The runner verifies the supplied IDs and labels against the shared split before
+comparing. Those exports reproduce the comparison metrics; retraining the
+partner models requires their own code.
+
+### 3. Course-method baselines
+
+```bash
+python course_models.py --out results/course_run
+```
+
+Count and TF-IDF features with logistic regression, cosine KNN and a random
+forest.
+
+### 4. Distance-weighted KNN comparison
 
 ```bash
 python experiments/knn_baseline.py
 ```
 
-Distance-weighted KNN over the 23 standardized stylometric features,
-evaluated at k = 15, 35 and 75 on the shared validation split. Writes
-`results/knn_comparison.csv`. Measured:
+Writes `results/knn_comparison.csv`. Comparison experiment, **not** the
+selected model.
 
-| k | Train AUROC (self-excluded) | Validation AUROC | Fit s | Predict s |
-| --- | --- | --- | --- | --- |
-| **15** | 0.973000 | **0.976686** | 0.001 | 0.031 |
-| 35 | 0.969870 | 0.974544 | 0.000 | 0.012 |
-| 75 | 0.964611 | 0.968988 | 0.000 | 0.018 |
+### 5. Generate the Kaggle submission
 
-Featurizing all 10,000 passages takes about 1.8 s; the KNN fit itself is
-effectively free, since fitting only builds the neighbour index.
+```bash
+python team_knn.py --submission submission.csv
+```
 
-The training AUROC is computed with each passage **excluded from its own
-vote** (scikit-learn's `predict_proba(None)`). Scoring training rows normally
-would match each one against itself at distance zero and report a
-near-perfect, meaningless figure.
+Fits the selected k = 15 uniform-vote configuration on **all 10,000** labeled
+passages and writes an `id,label` CSV with exactly **3,000** rows in `test.csv`
+order. Verified: columns `id,label`, unique IDs matching
+`sample_submission.csv`, all values finite and within [0, 1].
 
-Note that plain KNN is best at the *smallest* k tested and degrades as k
-grows. The locally weighted logistic regression added in the next milestone
-behaves the opposite way, so the two model families do not share a best k.
+`submission.csv` is gitignored — regenerate it from this command rather than
+committing it. The script refuses to overwrite an existing path.
 
-### Train and evaluate the selected model
-
-*Not yet implemented.* The locally weighted logistic regression entrypoint is
-added in Milestones 4–5.
-
-### Generate the Kaggle submission
-
-*Not yet implemented.* Added in Milestone 8. The script will fit the selected
-model on all 10,000 labeled passages and write exactly 3,000 probabilities to
-`submission.csv`, in the same id order as `test.csv`. `submission.csv` itself
-is gitignored; it is regenerated from the documented command.
-
-### Experiments
-
-*Not yet implemented.* Model comparison, learning curve, length-subgroup
-analysis, error analysis, feature clipping and markdown robustness are added
-in Milestones 5–7.
-
-## Planned structure
+## Repository layout
 
 ```text
 submissions/group26/
-    README.md                 # this file
-    requirements.txt          # pinned dependencies
-    config.py                 # paths, seeds, model constants
-    .gitignore                # re-includes results/*.csv (see note below)
-    results/                  # committed experiment outputs
-    data/                     # competition CSVs, not committed
-
+    README.md                   # this file
+    requirements.txt            # pinned dependencies
+    .gitignore                  # re-includes results/*.csv (see note below)
+    config.py                   # paths, seeds, model constants
     group26_validation_ids.txt  # the shared 2,000-row holdout
-    data_loading.py           # loaders, schema and split validation
-    features.py               # the 23 stylometric features
 
-    models.py                 # model construction and standardization
-    experiments/
-        knn_baseline.py       # distance-weighted KNN at k = 15 / 35 / 75
+    features.py                 # the 23 stylometric features (single source)
+    style_features.py           # compatibility shim re-exporting features.py
+    data_loading.py             # loaders, schema and split validation
+    models.py                   # model construction and standardization
 
-    # added in later milestones
-    train.py                  # training / evaluation entrypoint
-    evaluate.py               # validation metrics and error analysis
-    predict.py                # writes submission.csv
+    team_knn.py                 # selected model, report experiments, predict
+    course_models.py            # course-method baselines, shared utilities
+
     experiments/
-        model_comparison.py
-        learning_curve.py
-        error_analysis.py
-        feature_clipping.py
-        markdown_robustness.py
+        knn_baseline.py         # distance-weighted KNN comparison
+    results/                    # committed experiment outputs
+    data/                       # competition CSVs, not committed
 ```
+
+### Why `style_features.py` is a shim
+
+`features.py` and Kevin's original `style_features.py` held identical
+definitions — verified by comparing the regex constants and the full 23-column
+matrix over all 10,000 labeled passages under `numpy.array_equal`. Two copies
+invited silent drift, so the definitions now live in `features.py` and
+`style_features.py` re-exports them. Every import that worked before still
+works, and no value changed.
 
 ### A note on `.gitignore`
 
 The repository root `.gitignore` excludes `*.csv` everywhere. Without an
 override, every experiment result in `results/` would be silently dropped from
-the commit. The nested `.gitignore` in this directory re-includes
-`results/*.csv` while continuing to exclude the competition data,
-`submission.csv`, virtual environments, model artifacts and credentials. The
-root `.gitignore` is not modified.
+the commit. The nested `.gitignore` here re-includes `results/*.csv` while
+continuing to exclude the competition data, `submission.csv`, virtual
+environments, model artifacts and credentials. The root `.gitignore` is not
+modified.
 
-## Known gaps
+## Known gaps and limitations
 
-- **No semi-supervised experiment yet.** The competition supplies 3,000
-  unlabeled passages and the report asks what they contribute. We do not
-  currently have reproducible code for this, so it is tracked as an open gap
-  rather than reported with invented numbers. If it is not completed, the
-  report will say so plainly.
-- Learning curves, length-subgroup analysis and error analysis currently exist
-  only for the TF-IDF + SVM model in our development repository. They need to
-  be redone for the selected locally weighted logistic regression model.
-- The global logistic regression baseline quoted early in our team discussion
-  (≈0.9145) has never been re-run by us and is not treated as a measured
-  result.
+- **No `train.py` / `predict.py` wrappers yet.** `team_knn.py` already covers
+  both roles via `--out` and `--submission`; thin wrappers matching the course
+  template are planned.
+- **Tie-heavy scores.** The selected model emits only 16 distinct
+  probabilities, which costs ranking resolution under AUROC.
+- **Robustness only partly characterised.** One perturbation (markdown
+  stripping) was tested in a separate development repository. Paraphrasing,
+  unfamiliar generators and length manipulation are untested, so no general
+  robustness claim is made.
+- **Partner models live in separate pipelines.** The TF-IDF + SVM and the word
+  TF-IDF logistic regression are compared here through exported per-passage
+  validation scores, not retrained inside this directory.
+- **No Kaggle leaderboard score recorded yet.**
 
 ## AI assistance disclosure
 
-We used AI coding assistants throughout this project: **Claude Code**,
-**Codex**, and **ChatGPT**. They were used for writing and refactoring code,
-debugging, designing and running experiments, and drafting documentation
-including parts of this README.
+Required for Q6.3. Each account below is the member's own; nothing is inferred
+on anyone's behalf.
 
-What we did ourselves: we chose the modelling approaches, ran every experiment
-on our own machines, and verified the reported numbers against actual script
-output rather than accepting generated claims. Several assistant-suggested
-results were checked and corrected during development — including an incorrect
-conclusion that the shared validation seed was unreproducible, which was traced
-to row ordering, and an unfair hyperparameter comparison that had searched one
-option for only one of two models. No number in this repository is reported
-unless a script in it produced that number on our machines.
+**Arjun Cheema (ac3387).** Used **Claude Code** for writing and refactoring the
+data loader, feature wrappers, split verification, the distance-weighted KNN
+comparison and the TF-IDF + SVM experiments, for debugging, and for drafting
+documentation including parts of this README. Verified personally: every
+reported number comes from a script in this repository run on my own machine
+and checked against script output rather than accepted from the assistant.
+Several assistant-produced claims were found wrong and corrected — an incorrect
+conclusion that the shared validation seed was unreproducible (the cause was
+row ordering, not the seed), and an unfair hyperparameter comparison that had
+searched an option for only one of two models.
 
-A fuller account appears in Q6.3 of the written report.
+**Kevin Bradicich (kb846).** In his own words, from his original submission:
+"Codex helped discuss model and feature choices, implement and run experiments,
+check the partner score joins, inspect errors, and draft the report. The final
+workflow checked that the validation IDs and labels match the shared split and
+that the local prediction file contains the expected 3,000 test IDs."
+
+**May Hung (hh867).** *Disclosure pending — to be supplied by May before the PR
+is opened.* The course requires an account from each member, so this
+placeholder must be replaced rather than deleted.
+
+Tools used across the team: Claude Code, Codex, ChatGPT.

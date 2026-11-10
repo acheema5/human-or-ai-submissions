@@ -90,6 +90,14 @@ FEATURE_NAMES: tuple[str, ...] = (
 
 N_FEATURES = len(FEATURE_NAMES)
 
+#: Column indices kept by the feature-ablation experiment in `team_knn.py`:
+#: everything except the newline rate (6), the blank-line rate (7) and the 13
+#: punctuation rates (10-22). What remains is sentence shape, word shape and
+#: vocabulary statistics, with all layout and punctuation signal removed.
+#: Defined by Kevin alongside the original `style_features.py`; kept here so
+#: the feature definitions have a single home.
+FEATURES_WITHOUT_LAYOUT_PUNCTUATION = (0, 1, 2, 3, 4, 5, 8, 9)
+
 
 def featurize(texts) -> np.ndarray:
     """Stack `style_features` over an iterable of passages.
