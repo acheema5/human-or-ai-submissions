@@ -2,7 +2,7 @@
 
 Cornell Tech · Applied Machine Learning (CS 5785) · Kaggle competition code.
 
-**Kaggle team name:** `group26`
+**Kaggle team name:** `group-number-26` (Kaggle leaderboard name: Group Number 26)
 
 | Member | NetID | Main contribution |
 | --- | --- | --- |
@@ -133,7 +133,7 @@ Kevin's original workflow specified Python 3.13; those results reproduce
 unchanged on 3.14.7, which is the version verified here.
 
 ```bash
-cd submissions/group26
+cd submissions/group-number-26
 python3 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
@@ -149,7 +149,7 @@ timings are stable.
 The competition CSVs are **not** committed. Download them from Kaggle into:
 
 ```text
-submissions/group26/data/
+submissions/group-number-26/data/
     train.csv
     test.csv
     unlabeled.csv
@@ -169,9 +169,41 @@ GROUP26_DATA_DIR=/path/to/kaggle/csvs python team_knn.py --out results/run1
 
 ## Reproducing our results
 
-Every command below has been executed from `submissions/group26/` and produces
+Every command below has been executed from `submissions/group-number-26/` and produces
 the numbers quoted above. They also work from the repository root as
-`python submissions/group26/<script>.py`.
+`python submissions/group-number-26/<script>.py`.
+
+### Primary entrypoints (course template)
+
+Two commands cover the whole graded workflow. Both are thin wrappers that call
+`team_knn.py`; they contain no modelling logic, so the numbers are identical to
+running that script directly (verified byte-for-byte).
+
+```bash
+# train / evaluate on the shared validation split
+python train.py --out results/validation_run
+
+# write the Kaggle submission
+python predict.py --out submission.csv
+```
+
+Both work from this directory or from the repository root:
+
+```bash
+python submissions/group-number-26/train.py --out results/validation_run
+python submissions/group-number-26/predict.py --out submission.csv
+```
+
+Both accept `--data` and honour `GROUP26_DATA_DIR`; `train.py` additionally
+accepts `--validation-ids`, `--partner-logistic` and `--partner-svm`. Neither
+will overwrite an existing output path — choose a fresh one, or remove the old
+file first.
+
+`train.py --out` writes `metrics.json` and `validation_scores.csv`.
+`predict.py --out` writes the `id,label` CSV described in step 5 below.
+
+The remaining sections document the underlying scripts, which the wrappers
+delegate to and which expose the same behaviour.
 
 ### 1. Verify the data and the validation split
 
@@ -248,7 +280,7 @@ committing it. The script refuses to overwrite an existing path.
 ## Repository layout
 
 ```text
-submissions/group26/
+submissions/group-number-26/
     README.md                   # this file
     requirements.txt            # pinned dependencies
     .gitignore                  # re-includes results/*.csv (see note below)
@@ -260,6 +292,8 @@ submissions/group26/
     data_loading.py             # loaders, schema and split validation
     models.py                   # model construction and standardization
 
+    train.py                    # course entrypoint -> team_knn.py (evaluate)
+    predict.py                  # course entrypoint -> team_knn.py (submission)
     team_knn.py                 # selected model, report experiments, predict
     course_models.py            # course-method baselines, shared utilities
 
@@ -289,9 +323,6 @@ modified.
 
 ## Known gaps and limitations
 
-- **No `train.py` / `predict.py` wrappers yet.** `team_knn.py` already covers
-  both roles via `--out` and `--submission`; thin wrappers matching the course
-  template are planned.
 - **Tie-heavy scores.** The selected model emits only 16 distinct
   probabilities, which costs ranking resolution under AUROC.
 - **Robustness only partly characterised.** One perturbation (markdown
