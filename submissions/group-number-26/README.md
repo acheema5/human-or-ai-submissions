@@ -8,11 +8,7 @@ Cornell Tech · Applied Machine Learning (CS 5785) · Kaggle competition code.
 | --- | --- | --- |
 | Arjun Cheema | ac3387 | Word and character TF-IDF + linear SVM; shared data loader, split verification, distance-weighted KNN comparison |
 | Kevin Bradicich | kb846 | Style-feature KNN (the selected model), course-method baselines, validation comparison and reproduction workflow |
-| May Hung | hh867 | Word TF-IDF logistic regression |
-
-> **Roster note.** Contribution lines record what each member described as
-> their own work. Confirm the roster and NetIDs before opening the course PR.
-
+| May Hung | hh867 | Word TF-IDF logistic regression and contributed to the team experiments and report|
 ---
 
 ## The task
@@ -62,8 +58,7 @@ of 3,000 rows at exactly 0 or 1.
 
 ## Results
 
-All figures below are on the shared 2,000-passage validation holdout. **None
-are Kaggle public or private scores** — no leaderboard result is recorded yet.
+All figures below are on the shared 2,000-passage validation holdout. 
 
 ### Selected model and the KNN sweep
 
@@ -355,8 +350,7 @@ own machines.
 
 ## AI assistance disclosure
 
-Required for Q6.3. Each account below is the member's own; nothing is inferred
-on anyone's behalf.
+Tools used across the team: Claude Code, Codex, ChatGPT.
 
 **Arjun Cheema (ac3387).** Used **Claude Code** for writing and refactoring the
 data loader, feature wrappers, split verification, the distance-weighted KNN
@@ -369,14 +363,7 @@ conclusion that the shared validation seed was unreproducible (the cause was
 row ordering, not the seed), and an unfair hyperparameter comparison that had
 searched an option for only one of two models.
 
-**Kevin Bradicich (kb846).** In his own words, from his original submission:
-"Codex helped discuss model and feature choices, implement and run experiments,
-check the partner score joins, inspect errors, and draft the report. The final
-workflow checked that the validation IDs and labels match the shared split and
-that the local prediction file contains the expected 3,000 test IDs."
+**Kevin Bradicich (kb846).** Codex helped discuss model and feature choices, implement and run experiments, check the partner score joins, inspect errors, and draft the report. The final workflow checked that the validation IDs and labels match the shared split and that the local prediction file contains the expected 3,000 test IDs.
 
-**May Hung (hh867).** *Disclosure pending — to be supplied by May before the PR
-is opened.* The course requires an account from each member, so this
-placeholder must be replaced rather than deleted.
+**May Hung (hh867).** Used Claude Code to help generate code structures for model implementation and synthesize information for the report. Verified personally: all generated code and report contents were manually checked and validated to ensure accuracy and correctness.
 
-Tools used across the team: Claude Code, Codex, ChatGPT.
