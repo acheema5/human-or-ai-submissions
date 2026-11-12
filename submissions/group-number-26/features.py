@@ -98,6 +98,14 @@ N_FEATURES = len(FEATURE_NAMES)
 #: the feature definitions have a single home.
 FEATURES_WITHOUT_LAYOUT_PUNCTUATION = (0, 1, 2, 3, 4, 5, 8, 9)
 
+#: The 10 scalar features (columns 0-9), dropping the 13 per-character
+#: punctuation rates (10-22). Used by the shift-robust submission
+#: (`predict.py --feature-set scalar`). Those 13 rates are mostly zero (e.g. the
+#: em dash is zero for 96-99% of passages) and their test distribution differs
+#: from train, so after standardization a handful of rare marks dominate the
+#: Euclidean distance. See improvement.md.
+FEATURES_SCALAR_ONLY = tuple(range(10))
+
 
 def featurize(texts) -> np.ndarray:
     """Stack `style_features` over an iterable of passages.

@@ -61,6 +61,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory holding the competition CSVs (default: autodetected, "
              "honours GROUP26_DATA_DIR).",
     )
+    parser.add_argument(
+        "--feature-set", choices=("all", "scalar"), default="all",
+        help="'all' = the 23 features (reported model, default); 'scalar' = "
+             "the 10 scalar features (shift-robust variant, see improvement.md).",
+    )
     return parser
 
 
@@ -69,6 +74,7 @@ def main() -> None:
 
     argv = ["team_knn.py", "--submission", str(args.out)]
     argv += ["--data", str(args.data if args.data else default_data_dir())]
+    argv += ["--feature-set", args.feature_set]
 
     print(f"[predict.py] delegating to team_knn.py: {' '.join(argv[1:])}",
           flush=True)

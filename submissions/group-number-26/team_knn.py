@@ -23,6 +23,7 @@ from course_models import (
     targets,
     write_report,
 )
+from features import FEATURES_SCALAR_ONLY
 from style_features import FEATURES_WITHOUT_LAYOUT_PUNCTUATION, style_features
 
 
@@ -114,6 +115,15 @@ def run(train, validation, unlabeled, partners):
     metrics["feature_count"] = x.shape[1]
     metrics["reduced_feature_count"] = len(reduced)
 
+    # Shift-robust variant (see improvement.md): the 10 scalar features only.
+    # Standardization is per column, so slicing the 23-column scaled matrix is
+    # identical to fitting a scaler on the 10 columns alone.
+    scalar = FEATURES_SCALAR_ONLY
+    metrics["scalar_features_knn"], predictions["scalar_features_knn"] = evaluate(
+        knn(K), x[:, scalar], y, v[:, scalar], z, training_score=False
+    )
+    metrics["scalar_feature_count"] = len(scalar)
+
     lengths = np.array([len(row["text"].split()) for row in validation])
     metrics["length_bins"] = []
     for low, high in ((0, 150), (150, 250), (250, np.inf)):
@@ -146,8 +156,10 @@ def run(train, validation, unlabeled, partners):
     return metrics, predictions
 
 
-def predict(train, test, output):
+def predict(train, test, output, columns=None):
     a, b = features(train), features(test)
+    if columns is not None:
+        a, b = a[:, columns], b[:, columns]
     scaler = StandardScaler().fit(a)
     model = knn(K).fit(scaler.transform(a), targets(train))
     scores = model.predict_proba(scaler.transform(b))[:, 1]
@@ -167,12 +179,18 @@ def main():
     mode.add_argument("--submission", type=Path, help="New path for a local Kaggle-format CSV")
     parser.add_argument("--partner-logistic", type=Path, help="Optional partner probability CSV")
     parser.add_argument("--partner-svm", type=Path, help="Optional partner decision-score CSV")
+    parser.add_argument(
+        "--feature-set", choices=("all", "scalar"), default="all",
+        help="With --submission: 'all' = the 23 features (the reported model, "
+             "default); 'scalar' = the 10 scalar features (shift-robust variant).")
     args = parser.parse_args()
     output = args.out or args.submission
     if output and output.exists():
         parser.error("The output path already exists. Choose a new path.")
     if (args.partner_logistic or args.partner_svm) and not args.out:
         parser.error("Partner scores are only used with --out.")
+    if args.feature_set != "all" and not args.submission:
+        parser.error("--feature-set only applies to --submission.")
     train = sorted(read_rows(args.data / "train.csv"), key=lambda row: row["id"])
     if len(train) != 10_000 or len({row["id"] for row in train}) != len(train):
         parser.error("Expected 10,000 uniquely identified labeled training rows.")
@@ -180,7 +198,8 @@ def main():
         if args.make_split:
             make_split(train, args.validation_ids)
         elif args.submission:
-            predict(train, read_rows(args.data / "test.csv"), args.submission)
+            columns = list(FEATURES_SCALAR_ONLY) if args.feature_set == "scalar" else None
+            predict(train, read_rows(args.data / "test.csv"), args.submission, columns)
         else:
             train, validation = split_rows(train, args.validation_ids)
             partners = (("partner_logistic", args.partner_logistic, "pred_proba", .5),
